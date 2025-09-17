@@ -1,18 +1,14 @@
-import React from "react";
+// import React from "react";
 
-export default function Navbar() {
-  return (
-    <nav className="bg-white fixed w-full z-50 shadow">
-      <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-16">
-        <h1 className="text-2xl font-bold text-yellow-600">✂️ BarberPro</h1>
-        <ul className="hidden md:flex space-x-8 text-gray-700">
-          <li><a href="#home" className="hover:text-yellow-600 transition">Home</a></li>
-          <li><a href="#gallery" className="hover:text-yellow-600 transition">Gallery</a></li>
-          <li><a href="#booking" className="hover:text-yellow-600 transition">Booking</a></li>
-          <li><a href="#contact" className="hover:text-yellow-600 transition">Contact</a></li>
-        </ul>
-        <button className="md:hidden text-yellow-600">☰</button>
-      </div>
-    </nav>
-  );
-}
+// export default function Navbar() {
+//   return (
+//     <nav className="flex justify-between items-center py-6 px-8 bg-white shadow-md">
+//       <h1 className="text-2xl font-bold text-gray-800">Barbershop</h1>
+//       <ul className="flex gap-6 text-gray-600">
+//         <li><a href="#services">Services</a></li>
+//         <li><a href="#gallery">Gallery</a></li>
+//         <li><a href="#contact">Contact</a></li>
+//       </ul>
+//     </nav>
+//   );
+// }
