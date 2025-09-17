@@ -43,7 +43,7 @@ const ServicesSection = ({ currentColor }) => {
   ];
 
   return (
-    <section id="vibes" className="pt-19 bg-white relative overflow-hidden mb-10">
+    <section id="services" className="pt-19 bg-white relative overflow-hidden mb-10">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-20 left-20 w-32 h-32 bg-purple-400 rounded-full"></div>

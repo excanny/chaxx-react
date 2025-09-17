@@ -74,6 +74,19 @@ const HeroImageSlider = ({ images, autoPlay = true, interval = 4000 }) => {
     handleMouseUp();
   };
 
+   // Universal smooth scroll function for any hash link
+  const smoothScrollTo = (targetId, e) => {
+    e.preventDefault();
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      targetElement.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest'
+      });
+    }
+  };
+
   return (
     <div className="relative w-full mx-auto bg-white overflow-hidden shadow-2xl">
       {/* Main Slider Container */}
@@ -127,10 +140,13 @@ const HeroImageSlider = ({ images, autoPlay = true, interval = 4000 }) => {
         <div className="absolute bottom-12 sm:bottom-16 md:bottom-20 lg:bottom-24 left-0 right-0 px-4 sm:px-6 md:px-8 text-white">
           <div className="max-w-4xl mx-auto text-center">
             <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-              <button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl backdrop-blur-sm">
+              <button 
+                 onClick={(e) => smoothScrollTo('book', e)}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105 hover:shadow-2xl backdrop-blur-sm"
+              >
                 ✂️ Book Appointment
               </button>
-              <button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105">
+              <button onClick={(e) => smoothScrollTo('gallery', e)} className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/40 text-white px-6 sm:px-8 md:px-10 py-3 sm:py-4 rounded-full font-bold text-sm sm:text-base md:text-lg transition-all duration-300 transform hover:scale-105">
                 🎨 View Gallery
               </button>
             </div>

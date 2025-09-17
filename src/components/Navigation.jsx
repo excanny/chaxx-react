@@ -1,4 +1,18 @@
+
 const Navigation = ({ currentColor }) => {
+  // Universal smooth scroll function for any hash link
+  const smoothScrollTo = (targetId, e) => {
+    e.preventDefault();
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      targetElement.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest'
+      });
+    }
+  };
+
   return (
     <nav className="bg-white bg-opacity-95 backdrop-blur-md border-b-2 border-purple-200 sticky top-0 z-50 shadow-lg">
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-20">
@@ -20,14 +34,14 @@ const Navigation = ({ currentColor }) => {
         <ul className="hidden md:flex space-x-8">
           {['Home', 'Services', 'Gallery', 'Contact'].map((item) => (
             <li key={item}>
-              <a 
-                href={`#${item.toLowerCase()}`} 
+              <button 
+                onClick={(e) => smoothScrollTo(item.toLowerCase(), e)}
                 className="relative text-gray-700 hover:text-purple-600 transition-all duration-300 font-bold text-lg group"
               >
                 {item}
                 <div className={`absolute -bottom-2 left-0 w-0 h-1 bg-${currentColor.primary} group-hover:w-full transition-all duration-500 rounded-full`}></div>
                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-400 rounded-full opacity-0 group-hover:opacity-100 transition-opacity animate-pulse"></div>
-              </a>
+              </button>
             </li>
           ))}
         </ul>
