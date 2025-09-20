@@ -41,7 +41,7 @@ const Footer = ({ currentColor }) => {
           <p className="text-gray-300 text-xl font-medium">Where creativity meets craftsmanship ✨</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+        <div id="contact" className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
           {footerSections.map((section, index) => (
             <div key={index} className={`bg-${section.bgColor} p-8 rounded-3xl text-white shadow-xl transform hover:scale-105 hover:rotate-1 transition-all duration-300 cursor-pointer`}>
               <div className="text-4xl mb-4">{section.icon}</div>

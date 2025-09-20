@@ -16,21 +16,28 @@ const Navigation = ({ currentColor }) => {
   return (
     <nav className="bg-white bg-opacity-95 backdrop-blur-md border-b-2 border-purple-200 sticky top-0 z-50 shadow-lg">
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between h-20">
-        <div className="flex items-center space-x-4">
-          <div className="relative group">
-            <div className={`w-14 h-14 bg-${currentColor.primary} rounded-3xl flex items-center justify-center transform rotate-12 shadow-xl transition-all duration-1000 group-hover:rotate-45 group-hover:scale-110`}>
-              <span className="text-white text-2xl transform -rotate-12 group-hover:-rotate-45 transition-transform">✂️</span>
-            </div>
-            <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-ping"></div>
-            <div className="absolute -top-2 -right-2 w-6 h-6 bg-orange-400 rounded-full"></div>
-          </div>
-          <div>
-            <h1 className={`text-3xl font-black text-${currentColor.primary} transition-all duration-1000`}>
-              CHAXX 
-            </h1>
-            <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">BARBERSHOP</p>
-          </div>
-        </div>
+  <div className="flex items-center space-x-2"> {/* reduced from space-x-4 */}
+  <div className="relative group">
+    <div className="w-20 h-20 flex items-center justify-center p-2">
+      <img
+        src="assets/images/ChaxxLogo2cropped.png"
+        alt="Logo"
+        className="w-20 h-20 object-contain transform -rotate-12 group-hover:-rotate-45 transition-transform"
+      />
+    </div>
+  </div>
+
+  <div className="flex items-center">
+    <h1 className={`text-3xl font-extrabold text-${currentColor.primary} transition-all duration-1000`}>
+      CHAXX
+    </h1>
+    <p className="ml-1 text-sm text-gray-600 uppercase tracking-widest font-bold">
+      BARBERSHOP
+    </p>
+  </div>
+</div>
+
+
         <ul className="hidden md:flex space-x-8">
           {['Home', 'Services', 'Gallery', 'Contact'].map((item) => (
             <li key={item}>

@@ -1,4 +1,20 @@
 const ServiceCard = ({ service }) => {
+
+
+     // Universal smooth scroll function for any hash link
+  const smoothScrollTo = (targetId, e) => {
+    e.preventDefault();
+    const targetElement = document.getElementById(targetId);
+    if (targetElement) {
+      targetElement.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest'
+      });
+    }
+  };
+
+
   return (
     <div className="group relative bg-gradient-to-br from-white via-gray-50/30 to-white p-6 rounded-2xl hover:shadow-2xl hover:shadow-black/10 transition-all duration-700 transform hover:-translate-y-3 hover:rotate-1 border border-gray-300 overflow-hidden h-full flex flex-col">
       {/* Animated gradient overlay */}
@@ -59,7 +75,7 @@ const ServiceCard = ({ service }) => {
             </div>
             
             {/* CTA button */}
-            <button className={`w-full py-3 px-6 bg-gradient-to-r from-${service.color}/90 to-${service.color} text-white font-bold rounded-xl shadow-lg shadow-${service.color}/25 hover:shadow-xl hover:shadow-${service.color}/40 transform hover:scale-105 active:scale-95 transition-all duration-300 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0`}>
+            <button onClick={(e) => smoothScrollTo('book', e)} className={`w-full py-3 px-6 bg-gradient-to-r from-${service.color}/90 to-${service.color} text-white font-bold rounded-xl shadow-lg shadow-${service.color}/25 hover:shadow-xl hover:shadow-${service.color}/40 transform hover:scale-105 active:scale-95 transition-all duration-300 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0`}>
               Get Started
             </button>
           </div>
