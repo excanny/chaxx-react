@@ -11,6 +11,9 @@ const AdminLogin = () => {
 
   const navigate = useNavigate(); // ✅ React Router navigation
 
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+ 
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setError('');
@@ -28,7 +31,7 @@ const AdminLogin = () => {
 
       let data;
       try {
-        const response = await fetch('http://localhost:8000/api/login', {
+        const response = await fetch(`${baseUrl}/api/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferredTime, handleSubmit }) => {
   const [customerName, setCustomerName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedService, setSelectedService] = useState("");
-  const [paymentOption, setPaymentOption] = useState("later"); // "now" or "later"
+  const [paymentOption, setPaymentOption] = useState("later");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
-  // Sample services - replace with your actual services
+  // Get base URL from environment variables with fallback
+  const baseUrl = import.meta.env.VITE_API_BASE_URL;
+ 
   const services = [
     { id: 1, name: "Hair Cut & Style", duration: "1 hour", price: "$45", description: "Professional haircut with styling" },
     { id: 2, name: "Hair Color Treatment", duration: "2-3 hours", price: "$85", description: "Full color treatment with consultation" },
@@ -19,33 +23,77 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
   ];
 
   const dailySlots = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"];
-  const bookedSlots = {
-    "2025-09-17": ["11:00", "15:00"],
-    "2025-09-18": ["10:00", "14:00"],
-  };
 
-  // Get current date and time
   const now = new Date();
   const today = now.toISOString().split('T')[0];
-  const currentTime = now.getHours() * 100 + now.getMinutes(); // Convert to HHMM format for easy comparison
+  const currentTime = now.getHours() * 100 + now.getMinutes();
 
-  // Helper function to check if a time slot is in the past
   const isTimeInPast = (timeSlot) => {
     if (selectedDate !== today) return false;
-    
     const [hours, minutes] = timeSlot.split(':').map(Number);
     const slotTime = hours * 100 + minutes;
     return slotTime <= currentTime;
   };
 
-  const availableSlots = dailySlots.map((time) => {
-    const isBooked = bookedSlots[selectedDate]?.includes(time);
-    const isPast = isTimeInPast(time);
-    return { time, isBooked, isPast };
-  });
+  // Fetch available time slots when date changes
+  const fetchAvailableSlots = async (date) => {
+    if (!date) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    setLoadingSlots(true);
+    try {
+      const response = await fetch(`${baseUrl}/api/available-slots?date=${date}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Process the slots to include availability and past time info
+        const processedSlots = dailySlots.map((time) => {
+          const isBooked = !data.available_slots.includes(time);
+          const isPast = isTimeInPast(time);
+          return { time, isBooked, isPast };
+        });
+
+        setAvailableSlots(processedSlots);
+      } else {
+        console.error('Failed to fetch available slots');
+        // Fallback to default behavior if API fails
+        const fallbackSlots = dailySlots.map((time) => {
+          const isPast = isTimeInPast(time);
+          return { time, isBooked: false, isPast };
+        });
+        setAvailableSlots(fallbackSlots);
+      }
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      // Fallback to default behavior if API fails
+      const fallbackSlots = dailySlots.map((time) => {
+        const isPast = isTimeInPast(time);
+        return { time, isBooked: false, isPast };
+      });
+      setAvailableSlots(fallbackSlots);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Effect to fetch slots when date changes
+  useEffect(() => {
+    if (selectedDate) {
+      fetchAvailableSlots(selectedDate);
+    } else {
+      setAvailableSlots([]);
+    }
+  }, [selectedDate]);
 
   const handleApiSubmit = async () => {
-    // Validation
     if (!selectedService) {
       setSubmitMessage("Please select a service");
       return;
@@ -58,7 +106,6 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
       setSubmitMessage("Please enter your phone number");
       return;
     }
-    // Validate Canadian phone number format
     const phoneDigits = phoneNumber.replace(/\D/g, '');
     if (phoneDigits.length !== 10) {
       setSubmitMessage("Please enter a valid 10-digit phone number");
@@ -77,18 +124,17 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
     setSubmitMessage("");
 
     try {
-      // Format the appointment time for the API
       const appointmentDateTime = `${selectedDate} ${preferredTime}:00`;
       
       const bookingData = {
         service_id: parseInt(selectedService),
         customer_name: customerName.trim(),
-        phone_number: phoneDigits, // Send clean digits to API
+        phone_number: phoneDigits,
         appointment_time: appointmentDateTime,
         pay_now: paymentOption === "now"
       };
 
-      const response = await fetch('http://localhost:8000/api/bookings', {
+      const response = await fetch(`${baseUrl}/api/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -100,15 +146,14 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
         const result = await response.json();
         setSubmitMessage("🎉 Booking confirmed! We'll contact you soon.");
         
-        // Reset form
         setSelectedService("");
         setCustomerName("");
         setPhoneNumber("");
         setPaymentOption("later");
         setSelectedDate("");
         setPreferredTime("");
+        setAvailableSlots([]);
         
-        // Call the original handleSubmit if provided
         if (handleSubmit) {
           handleSubmit(result);
         }
@@ -125,44 +170,44 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
   };
 
   return (
-    <div className="bg-gray-50 rounded-3xl p-12 shadow-2xl border-4 border-gray-200 relative overflow-hidden">
+    <div className="bg-gray-50 rounded-2xl p-8 shadow-xl border-2 border-gray-200 relative overflow-hidden">
       {/* Decorative Elements */}
-      <div className="absolute top-6 left-6 w-12 h-12 bg-purple-400 rounded-full opacity-20 animate-pulse"></div>
-      <div className="absolute bottom-6 right-6 w-16 h-16 bg-cyan-400 rounded-full opacity-20 animate-pulse" style={{animationDelay: '1s'}}></div>
+      <div className="absolute top-4 left-4 w-8 h-8 bg-purple-400 rounded-full opacity-20 animate-pulse"></div>
+      <div className="absolute bottom-4 right-4 w-10 h-10 bg-cyan-400 rounded-full opacity-20 animate-pulse" style={{animationDelay: '1s'}}></div>
 
       {/* Service Selection */}
-      <div className="mb-10 relative z-10">
-        <label className="block text-2xl font-black text-pink-600 mb-6">
+      <div className="mb-6 relative z-10">
+        <label className="block text-lg font-bold text-pink-600 mb-4">
           ✨ Choose Your Service
         </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {services.map((service) => (
             <button
               key={service.id}
               type="button"
               onClick={() => setSelectedService(service.id.toString())}
-              className={`p-6 rounded-3xl border-4 transition-all transform hover:scale-105 text-left ${
+              className={`p-4 rounded-2xl border-2 transition-all transform hover:scale-102 text-left ${
                 selectedService === service.id.toString()
-                  ? "border-pink-500 bg-pink-50 shadow-xl scale-105 rotate-1"
-                  : "border-pink-200 bg-white hover:border-pink-400 shadow-lg hover:shadow-xl"
+                  ? "border-pink-500 bg-pink-50 shadow-lg scale-102"
+                  : "border-pink-200 bg-white hover:border-pink-400 shadow-md hover:shadow-lg"
               }`}
             >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-black text-gray-800">{service.name}</h3>
-                <div className={`w-5 h-5 rounded-full border-3 ${
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-md font-bold text-gray-800">{service.name}</h3>
+                <div className={`w-4 h-4 rounded-full border-2 ${
                   selectedService === service.id.toString() 
                     ? "border-pink-500 bg-pink-500" 
                     : "border-gray-300"
                 }`}>
                   {selectedService === service.id.toString() && (
-                    <div className="w-2 h-2 bg-white rounded-full mx-auto mt-0.5"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full mx-auto mt-0.5"></div>
                   )}
                 </div>
               </div>
-              <p className="text-gray-600 text-sm mb-2">{service.description}</p>
+              <p className="text-gray-600 text-xs mb-2">{service.description}</p>
               <div className="flex justify-between items-center">
-                <span className="text-pink-600 font-bold text-lg">{service.price}</span>
-                <span className="text-gray-500 text-sm">{service.duration}</span>
+                <span className="text-pink-600 font-bold text-md">{service.price}</span>
+                <span className="text-gray-500 text-xs">{service.duration}</span>
               </div>
             </button>
           ))}
@@ -170,8 +215,8 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
       </div>
 
       {/* Date Selection */}
-      <div className="mb-10 relative z-10">
-        <label className={`block text-2xl font-black text-purple-600 mb-4`}>
+      <div className="mb-6 relative z-10">
+        <label className="block text-lg font-bold text-purple-600 mb-3">
           🗓️ Pick Your Date
         </label>
         <input
@@ -182,60 +227,68 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
             setSelectedDate(e.target.value);
             setPreferredTime("");
           }}
-          className="w-full border-4 border-purple-200 rounded-2xl px-8 py-5 text-xl font-bold focus:border-purple-500 focus:outline-none transition-all bg-white shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="w-full border-2 border-purple-200 rounded-xl px-4 py-3 text-lg font-semibold focus:border-purple-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
         />
       </div>
 
       {/* Time Slots */}
       {selectedDate && (
-        <div className="mb-12 relative z-10">
-          <label className={`block text-2xl font-black text-cyan-600 mb-6`}>
+        <div className="mb-8 relative z-10">
+          <label className="block text-lg font-bold text-cyan-600 mb-4">
             ⏰ Choose Your Time
           </label>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-4">
-            {availableSlots.map(({ time, isBooked, isPast }) => (
-              <button
-                key={time}
-                disabled={isBooked || isPast}
-                onClick={() => setPreferredTime(time)}
-                className={`px-6 py-5 rounded-2xl font-black text-lg transition-all transform hover:scale-110 ${
-                  isBooked || isPast
-                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    : preferredTime === time
-                    ? "bg-purple-500 text-white shadow-xl scale-110 rotate-3"
-                    : "bg-white border-4 border-purple-200 text-purple-600 hover:border-purple-500 hover:bg-purple-50 shadow-lg hover:shadow-xl hover:rotate-1"
-                }`}
-                title={isPast ? "Time has passed" : isBooked ? "Already booked" : "Available"}
-              >
-                {time}
-                {isPast && <span className="block text-xs">Past</span>}
-              </button>
-            ))}
-          </div>
+          
+          {loadingSlots ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div>
+              <span className="ml-3 text-cyan-600 font-semibold">Loading available times...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {availableSlots.map(({ time, isBooked, isPast }) => (
+                <button
+                  key={time}
+                  disabled={isBooked || isPast}
+                  onClick={() => setPreferredTime(time)}
+                  className={`px-3 py-3 rounded-xl font-bold text-sm transition-all transform hover:scale-105 ${
+                    isBooked || isPast
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      : preferredTime === time
+                      ? "bg-purple-500 text-white shadow-lg scale-105"
+                      : "bg-white border-2 border-purple-200 text-purple-600 hover:border-purple-500 hover:bg-purple-50 shadow-md hover:shadow-lg"
+                  }`}
+                  title={isPast ? "Time has passed" : isBooked ? "Already booked" : "Available"}
+                >
+                  {time}
+                  {isPast && <span className="block text-xs">Past</span>}
+                  {isBooked && !isPast && <span className="block text-xs">Booked</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* Contact Form */}
-      <div className="space-y-8 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="space-y-6 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xl font-black text-gray-800 mb-4">✨ Your Name</label>
+            <label className="block text-md font-bold text-gray-800 mb-2">✨ Your Name</label>
             <input
               type="text"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="What should we call you?"
-              className="w-full border-4 border-cyan-200 rounded-2xl px-8 py-5 text-xl font-bold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="w-full border-2 border-cyan-200 rounded-xl px-4 py-3 text-md font-semibold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
             />
           </div>
           <div>
-            <label className="block text-xl font-black text-gray-800 mb-4">📱 Phone Number</label>
+            <label className="block text-md font-bold text-gray-800 mb-2">📱 Phone Number</label>
             <input
               type="tel"
               value={phoneNumber}
               onChange={(e) => {
-                // Format phone number as user types
-                const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+                const value = e.target.value.replace(/\D/g, '');
                 let formatted = '';
                 
                 if (value.length >= 1) {
@@ -246,7 +299,6 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
                   } else if (value.length <= 10) {
                     formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
                   } else {
-                    // Limit to 10 digits
                     formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
                   }
                 }
@@ -255,75 +307,67 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
               }}
               placeholder="(416) 123-4567"
               maxLength={14}
-              className="w-full border-4 border-cyan-200 rounded-2xl px-8 py-5 text-xl font-bold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-lg hover:shadow-xl transform hover:scale-105"
+              className="w-full border-2 border-cyan-200 rounded-xl px-4 py-3 text-md font-semibold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
             />
           </div>
-        </div>
-        
-        <div>
-          <label className="block text-xl font-black text-gray-800 mb-4">🕐 Your Selected Time</label>
-          <input
-            type="text"
-            readOnly
-            value={preferredTime}
-            placeholder="Pick a time slot from above"
-            className="w-full bg-gray-100 border-4 border-gray-300 rounded-2xl px-8 py-5 text-xl font-bold cursor-not-allowed shadow-lg"
-          />
         </div>
 
         {/* Payment Options */}
         <div>
-          <label className="block text-xl font-black text-gray-800 mb-6">💳 Payment Option</label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <label className="block text-md font-bold text-gray-800 mb-4">💳 Payment Option</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               type="button"
               onClick={() => setPaymentOption("later")}
-              className={`p-8 rounded-3xl border-4 transition-all transform hover:scale-105 text-left ${
+              className={`p-4 rounded-2xl border-2 transition-all transform hover:scale-102 text-left ${
                 paymentOption === "later"
-                  ? "border-emerald-500 bg-emerald-50 shadow-xl scale-105"
-                  : "border-gray-300 bg-white hover:border-emerald-300 shadow-lg"
+                  ? "border-emerald-500 bg-emerald-50 shadow-lg scale-102"
+                  : "border-gray-300 bg-white hover:border-emerald-300 shadow-md"
               }`}
             >
-              <div className="flex items-center mb-4">
-                <div className={`w-6 h-6 rounded-full border-4 mr-4 ${
+              <div className="flex items-center mb-2">
+                <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
                   paymentOption === "later" ? "border-emerald-500 bg-emerald-500" : "border-gray-300"
                 }`}>
                   {paymentOption === "later" && (
-                    <div className="w-2 h-2 bg-white rounded-full mx-auto mt-1"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full mx-auto mt-0.5"></div>
                   )}
                 </div>
-                <h3 className="text-xl font-black text-gray-800">Pay at Appointment</h3>
+                <h3 className="text-md font-bold text-gray-800">Pay at Appointment</h3>
               </div>
-              <p className="text-gray-600 font-medium">
-                💼 Pay when you arrive for your appointment. Cash, card, or e-transfer accepted.
+              <p className="text-gray-600 text-sm">
+                💼 Pay when you arrive. Cash, card, or e-transfer.
               </p>
-        
             </button>
 
             <button
               type="button"
               onClick={() => setPaymentOption("now")}
-              className={`p-8 rounded-3xl border-4 transition-all transform hover:scale-105 text-left ${
+              className={`p-4 rounded-2xl border-2 transition-all text-left relative ${
                 paymentOption === "now"
-                  ? "border-purple-500 bg-purple-50 shadow-xl scale-105"
-                  : "border-gray-300 bg-white hover:border-purple-300 shadow-lg"
+                  ? "border-gray-400 bg-gray-100 shadow-md"
+                  : "border-gray-300 bg-gray-100 shadow-md cursor-not-allowed opacity-60"
               }`}
+              disabled
             >
-              <div className="flex items-center mb-4">
-                <div className={`w-6 h-6 rounded-full border-4 mr-4 ${
-                  paymentOption === "now" ? "border-purple-500 bg-purple-500" : "border-gray-300"
+              <div className="flex items-center mb-2">
+                <div className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                  paymentOption === "now" ? "border-gray-400 bg-gray-400" : "border-gray-300"
                 }`}>
                   {paymentOption === "now" && (
-                    <div className="w-2 h-2 bg-white rounded-full mx-auto mt-1"></div>
+                    <div className="w-1.5 h-1.5 bg-white rounded-full mx-auto mt-0.5"></div>
                   )}
                 </div>
-                <h3 className="text-xl font-black text-gray-800">Pay Now Online</h3>
+                <h3 className="text-md font-bold text-gray-500">Pay Now Online</h3>
               </div>
-              <p className="text-gray-600 font-medium">
-                🚀 Secure your spot instantly with online payment. Get confirmation immediately.
+              <p className="text-gray-400 text-sm">
+                🚀 Secure your spot instantly with online payment.
               </p>
-              <div className="mt-4 text-purple-600 font-bold">
+              <div className="mt-2 text-gray-400 font-bold text-sm">
                 🎯 Guaranteed Booking
+              </div>
+              <div className="absolute top-2 right-2 bg-gray-400 text-white text-xs px-2 py-1 rounded-full font-bold">
+                Coming Soon
               </div>
             </button>
           </div>
@@ -331,7 +375,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
 
         {/* Submit Message */}
         {submitMessage && (
-          <div className={`text-center p-4 rounded-2xl font-bold text-lg ${
+          <div className={`text-center p-3 rounded-xl font-semibold text-md ${
             submitMessage.includes('confirmed') || submitMessage.includes('🎉') 
               ? 'bg-green-100 text-green-800' 
               : 'bg-red-100 text-red-800'
@@ -340,7 +384,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
           </div>
         )}
 
-        <div className="pt-10 text-center">
+        <div className="pt-6 text-center">
           <button 
             onClick={handleApiSubmit}
             disabled={isSubmitting}
@@ -348,9 +392,9 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
               isSubmitting 
                 ? 'bg-gray-400 cursor-not-allowed' 
                 : paymentOption === "now"
-                ? 'bg-purple-500 hover:bg-purple-600 cursor-pointer hover:scale-110 hover:rotate-3'
-                : 'bg-emerald-500 hover:bg-emerald-600 cursor-pointer hover:scale-110 hover:rotate-3'
-            } text-white px-16 py-6 rounded-full font-black text-2xl transition-all duration-500 transform shadow-2xl hover:shadow-3xl`}
+                ? 'bg-purple-500 hover:bg-purple-600 cursor-pointer hover:scale-105'
+                : 'bg-emerald-500 hover:bg-emerald-600 cursor-pointer hover:scale-105'
+            } text-white px-12 py-4 rounded-full font-bold text-lg transition-all duration-300 transform shadow-lg hover:shadow-xl`}
           >
             <span className="relative z-10">
               {isSubmitting 
@@ -364,17 +408,11 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
               <>
                 <div className={`absolute inset-0 ${
                   paymentOption === "now" ? 'bg-purple-400' : 'bg-emerald-400'
-                } rounded-full blur-lg opacity-75 group-hover:opacity-100 group-hover:blur-xl transition-all duration-500`}></div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full animate-ping"></div>
+                } rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-all duration-300`}></div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full animate-ping"></div>
               </>
             )}
           </button>
-          <p className="text-gray-600 mt-6 font-medium">
-            {paymentOption === "now" 
-              ? "Secure payment processing • Instant confirmation 🔒" 
-              : "We'll confirm within 30 minutes! 💫"
-            }
-          </p>
         </div>
       </div>
     </div>
