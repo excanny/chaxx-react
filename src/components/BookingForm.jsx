@@ -44,7 +44,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
 
     setLoadingSlots(true);
     try {
-      const response = await fetch(`${baseUrl}/api/available-slots?date=${date}`, {
+      const response = await fetch(`${baseUrl}/available-slots?date=${date}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +134,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
         pay_now: paymentOption === "now"
       };
 
-      const response = await fetch(`${baseUrl}/api/bookings`, {
+      const response = await fetch(`${baseUrl}/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,45 +174,6 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
       {/* Decorative Elements */}
       <div className="absolute top-4 left-4 w-8 h-8 bg-purple-400 rounded-full opacity-20 animate-pulse"></div>
       <div className="absolute bottom-4 right-4 w-10 h-10 bg-cyan-400 rounded-full opacity-20 animate-pulse" style={{animationDelay: '1s'}}></div>
-
-      {/* Service Selection */}
-      <div className="mb-6 relative z-10">
-        <label className="block text-lg font-bold text-pink-600 mb-4">
-          ✨ Choose Your Service
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {services.map((service) => (
-            <button
-              key={service.id}
-              type="button"
-              onClick={() => setSelectedService(service.id.toString())}
-              className={`p-4 rounded-2xl border-2 transition-all transform hover:scale-102 text-left ${
-                selectedService === service.id.toString()
-                  ? "border-pink-500 bg-pink-50 shadow-lg scale-102"
-                  : "border-pink-200 bg-white hover:border-pink-400 shadow-md hover:shadow-lg"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-md font-bold text-gray-800">{service.name}</h3>
-                <div className={`w-4 h-4 rounded-full border-2 ${
-                  selectedService === service.id.toString() 
-                    ? "border-pink-500 bg-pink-500" 
-                    : "border-gray-300"
-                }`}>
-                  {selectedService === service.id.toString() && (
-                    <div className="w-1.5 h-1.5 bg-white rounded-full mx-auto mt-0.5"></div>
-                  )}
-                </div>
-              </div>
-              <p className="text-gray-600 text-xs mb-2">{service.description}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-pink-600 font-bold text-md">{service.price}</span>
-                <span className="text-gray-500 text-xs">{service.duration}</span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Date Selection */}
       <div className="mb-6 relative z-10">
