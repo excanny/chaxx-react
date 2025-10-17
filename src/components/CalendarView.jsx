@@ -144,9 +144,9 @@ const CalendarView = ({
                           <div className="truncate text-xs opacity-90 leading-tight">
                             {booking.customer_name}
                           </div>
-                          <div className="truncate text-xs opacity-75 leading-tight">
+                          {/* <div className="truncate text-xs opacity-75 leading-tight">
                             {service ? service.name : `Service ${booking.service_id}`}
-                          </div>
+                          </div> */}
                         </div>
                       );
                     })}

@@ -27,7 +27,10 @@ const UpcomingAlerts = ({ upcomingAlerts, services }) => {
                 </span>
               </div>
               <p className="text-gray-600 text-sm mb-1">
-                {service ? service.name : `Service ${booking.service_id}`}
+                Phone Number: {booking.phone_number}
+              </p>
+               <p className="text-gray-600 text-sm mb-1">
+                Email: {booking.email}
               </p>
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <Clock size={12} />

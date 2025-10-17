@@ -1,28 +1,38 @@
 import { useState, useEffect } from 'react';
 
-const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferredTime, handleSubmit }) => {
+const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferredTime }) => {
   const [customerName, setCustomerName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [selectedService, setSelectedService] = useState("");
+  const [email, setEmail] = useState("");
   const [paymentOption, setPaymentOption] = useState("later");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [bookingMode, setBookingMode] = useState("single");
+  const [groupBookings, setGroupBookings] = useState([]);
 
-  // Get base URL from environment variables with fallback
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
- 
-  const services = [
-    { id: 1, name: "Hair Cut & Style", duration: "1 hour", price: "$45", description: "Professional haircut with styling" },
-    { id: 2, name: "Hair Color Treatment", duration: "2-3 hours", price: "$85", description: "Full color treatment with consultation" },
-    { id: 3, name: "Facial Treatment", duration: "90 minutes", price: "$75", description: "Deep cleansing and rejuvenating facial" },
-    { id: 4, name: "Manicure & Pedicure", duration: "2 hours", price: "$65", description: "Complete nail care treatment" },
-    { id: 5, name: "Massage Therapy", duration: "60 minutes", price: "$95", description: "Relaxing full-body massage" },
-    { id: 6, name: "Bridal Package", duration: "4 hours", price: "$250", description: "Complete bridal beauty treatment" }
-  ];
 
-  const dailySlots = ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"];
+  const generateTimeSlots = (date) => {
+    if (!date) return [];
+    
+    const dayOfWeek = new Date(date).getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    const startHour = 9;
+    const endHour = isWeekend ? 20 : 18;
+    
+    const slots = [];
+    for (let hour = startHour; hour < endHour; hour++) {
+      slots.push(`${hour.toString().padStart(2, '0')}:00`);
+      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+    }
+    
+    return slots;
+  };
+
+  const dailySlots = generateTimeSlots(selectedDate);
 
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -35,7 +45,18 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
     return slotTime <= currentTime;
   };
 
-  // Fetch available time slots when date changes
+  const isSlotTaken = (timeSlot) => {
+    return groupBookings.some(booking => booking.time === timeSlot);
+  };
+
+  const isSlotSelected = (timeSlot) => {
+    if (bookingMode === "single") {
+      return preferredTime === timeSlot;
+    } else {
+      return isSlotTaken(timeSlot);
+    }
+  };
+
   const fetchAvailableSlots = async (date) => {
     if (!date) {
       setAvailableSlots([]);
@@ -54,29 +75,29 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
       if (response.ok) {
         const data = await response.json();
         
-        // Process the slots to include availability and past time info
         const processedSlots = dailySlots.map((time) => {
           const isBooked = !data.available_slots.includes(time);
           const isPast = isTimeInPast(time);
-          return { time, isBooked, isPast };
+          const isTaken = isSlotTaken(time);
+          return { time, isBooked, isPast, isTaken };
         });
 
         setAvailableSlots(processedSlots);
       } else {
         console.error('Failed to fetch available slots');
-        // Fallback to default behavior if API fails
         const fallbackSlots = dailySlots.map((time) => {
           const isPast = isTimeInPast(time);
-          return { time, isBooked: false, isPast };
+          const isTaken = isSlotTaken(time);
+          return { time, isBooked: false, isPast, isTaken };
         });
         setAvailableSlots(fallbackSlots);
       }
     } catch (error) {
       console.error('Error fetching available slots:', error);
-      // Fallback to default behavior if API fails
       const fallbackSlots = dailySlots.map((time) => {
         const isPast = isTimeInPast(time);
-        return { time, isBooked: false, isPast };
+        const isTaken = isSlotTaken(time);
+        return { time, isBooked: false, isPast, isTaken };
       });
       setAvailableSlots(fallbackSlots);
     } finally {
@@ -84,7 +105,6 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
     }
   };
 
-  // Effect to fetch slots when date changes
   useEffect(() => {
     if (selectedDate) {
       fetchAvailableSlots(selectedDate);
@@ -93,89 +113,246 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
     }
   }, [selectedDate]);
 
-  const handleApiSubmit = async () => {
-    if (!selectedService) {
-      setSubmitMessage("Please select a service");
-      return;
-    }
-    if (!customerName.trim()) {
-      setSubmitMessage("Please enter your name");
-      return;
-    }
-    if (!phoneNumber.trim()) {
-      setSubmitMessage("Please enter your phone number");
-      return;
-    }
-    const phoneDigits = phoneNumber.replace(/\D/g, '');
-    if (phoneDigits.length !== 10) {
-      setSubmitMessage("Please enter a valid 10-digit phone number");
-      return;
-    }
-    if (!selectedDate) {
-      setSubmitMessage("Please select a date");
-      return;
-    }
-    if (!preferredTime) {
-      setSubmitMessage("Please select a time slot");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitMessage("");
-
-    try {
-      const appointmentDateTime = `${selectedDate} ${preferredTime}:00`;
-      
-      const bookingData = {
-        service_id: parseInt(selectedService),
-        customer_name: customerName.trim(),
-        phone_number: phoneDigits,
-        appointment_time: appointmentDateTime,
-        pay_now: paymentOption === "now"
+  const handleTimeSlotClick = (time) => {
+    if (bookingMode === "single") {
+      setPreferredTime(time);
+    } else {
+      // For group mode, directly add to group bookings
+      const newBooking = {
+        id: Date.now(),
+        time: time,
+        name: "",
+        phone: "",
+        email: ""
       };
+      setGroupBookings([...groupBookings, newBooking]);
+      setSubmitMessage("");
+    }
+  };
 
-      const response = await fetch(`${baseUrl}/bookings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bookingData)
-      });
+  const removeBookingFromGroup = (id) => {
+    setGroupBookings(groupBookings.filter(b => b.id !== id));
+  };
 
-      if (response.ok) {
-        const result = await response.json();
-        setSubmitMessage("🎉 Booking confirmed! We'll contact you soon.");
-        
-        setSelectedService("");
-        setCustomerName("");
-        setPhoneNumber("");
-        setPaymentOption("later");
-        setSelectedDate("");
-        setPreferredTime("");
-        setAvailableSlots([]);
-        
-        if (handleSubmit) {
-          handleSubmit(result);
-        }
-      } else {
-        const errorData = await response.json();
-        setSubmitMessage(`❌ Booking failed: ${errorData.message || 'Please try again'}`);
+  const updateGroupBooking = (id, field, value) => {
+    setGroupBookings(groupBookings.map(b => 
+      b.id === id ? { ...b, [field]: value } : b
+    ));
+  };
+
+  const handleApiSubmit = async () => {
+    if (bookingMode === "single") {
+      if (!customerName.trim()) {
+        setSubmitMessage("Please enter your name");
+        return;
       }
-    } catch (error) {
-      console.error('Booking error:', error);
-      setSubmitMessage("❌ Network error. Please check your connection and try again.");
-    } finally {
-      setIsSubmitting(false);
+      if (!phoneNumber.trim()) {
+        setSubmitMessage("Please enter your phone number");
+        return;
+      }
+      const phoneDigits = phoneNumber.replace(/\D/g, '');
+      if (phoneDigits.length !== 10) {
+        setSubmitMessage("Please enter a valid 10-digit phone number");
+        return;
+      }
+      if (!email.trim()) {
+        setSubmitMessage("Please enter your email address");
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setSubmitMessage("Please enter a valid email address");
+        return;
+      }
+      if (!selectedDate) {
+        setSubmitMessage("Please select a date");
+        return;
+      }
+      if (!preferredTime) {
+        setSubmitMessage("Please select a time slot");
+        return;
+      }
+
+      setIsSubmitting(true);
+      setSubmitMessage("");
+
+      try {
+        const booking = {
+          customer_name: customerName.trim(),
+          phone_number: phoneDigits,
+          email: email.trim(),
+          appointment_time: `${selectedDate} ${preferredTime}:00`,
+          pay_now: paymentOption === "now"
+        };
+
+        const response = await fetch(`${baseUrl}/bookings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(booking)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setSubmitMessage("🎉 Booking confirmed! We'll contact you soon.");
+          setCustomerName("");
+          setPhoneNumber("");
+          setEmail("");
+          setPaymentOption("later");
+          setSelectedDate("");
+          setPreferredTime("");
+          setAvailableSlots([]);
+          
+          console.log('Booking successful:', result);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Booking failed:', errorData);
+          setSubmitMessage("❌ Booking failed. Please try again or contact us.");
+        }
+      } catch (error) {
+        console.error('Booking error:', error);
+        setSubmitMessage("❌ Network error. Please check your connection and try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      if (!selectedDate) {
+        setSubmitMessage("Please select a date");
+        return;
+      }
+      if (groupBookings.length === 0) {
+        setSubmitMessage("Please add at least one booking to your group");
+        return;
+      }
+
+      for (let booking of groupBookings) {
+        if (!booking.name.trim()) {
+          setSubmitMessage(`Please enter name for ${booking.time} slot`);
+          return;
+        }
+        if (!booking.phone.trim()) {
+          setSubmitMessage(`Please enter phone number for ${booking.name || booking.time + ' slot'}`);
+          return;
+        }
+        const guestPhoneDigits = booking.phone.replace(/\D/g, '');
+        if (guestPhoneDigits.length !== 10) {
+          setSubmitMessage(`Please enter a valid 10-digit phone number for ${booking.name || booking.time + ' slot'}`);
+          return;
+        }
+        if (!booking.email.trim()) {
+          setSubmitMessage(`Please enter email for ${booking.name || booking.time + ' slot'}`);
+          return;
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(booking.email.trim())) {
+          setSubmitMessage(`Please enter a valid email for ${booking.name || booking.time + ' slot'}`);
+          return;
+        }
+      }
+
+      setIsSubmitting(true);
+      setSubmitMessage("");
+
+      try {
+        const bookings = groupBookings.map(booking => ({
+          customer_name: booking.name.trim(),
+          phone_number: booking.phone.replace(/\D/g, ''),
+          email: booking.email.trim(),
+          appointment_time: `${selectedDate} ${booking.time}:00`,
+          pay_now: paymentOption === "now"
+        }));
+
+        console.log('Submitting group bookings:', bookings);
+
+        const responses = await Promise.all(
+          bookings.map(booking => 
+            fetch(`${baseUrl}/bookings`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(booking)
+            })
+          )
+        );
+
+        const allSuccessful = responses.every(r => r.ok);
+
+        if (allSuccessful) {
+          const results = await Promise.all(responses.map(r => r.json()));
+          console.log('Group booking successful:', results);
+          
+          setSubmitMessage(`🎉 Group booking confirmed for ${groupBookings.length} ${groupBookings.length === 1 ? 'person' : 'people'}! We'll contact you soon.`);
+          setCustomerName("");
+          setPhoneNumber("");
+          setEmail("");
+          setPaymentOption("later");
+          setSelectedDate("");
+          setPreferredTime("");
+          setAvailableSlots([]);
+          setGroupBookings([]);
+        } else {
+          const failedCount = responses.filter(r => !r.ok).length;
+          console.error(`${failedCount} booking(s) failed`);
+          setSubmitMessage(`❌ ${failedCount} booking(s) failed. Please try again or contact us.`);
+        }
+      } catch (error) {
+        console.error('Booking error:', error);
+        setSubmitMessage("❌ Network error. Please check your connection and try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
   return (
     <div className="bg-gray-50 rounded-2xl p-8 shadow-xl border-2 border-gray-200 relative overflow-hidden">
-      {/* Decorative Elements */}
       <div className="absolute top-4 left-4 w-8 h-8 bg-purple-400 rounded-full opacity-20 animate-pulse"></div>
       <div className="absolute bottom-4 right-4 w-10 h-10 bg-cyan-400 rounded-full opacity-20 animate-pulse" style={{animationDelay: '1s'}}></div>
 
-      {/* Date Selection */}
+      <div className="mb-8 relative z-10">
+        <label className="block text-lg font-bold text-gray-800 mb-3">
+          🎯 Booking Type
+        </label>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => {
+              setBookingMode("single");
+              setGroupBookings([]);
+              setPreferredTime("");
+            }}
+            className={`p-4 rounded-xl border-2 transition-all transform hover:scale-102 ${
+              bookingMode === "single"
+                ? "border-purple-500 bg-purple-50 shadow-lg"
+                : "border-gray-300 bg-white hover:border-purple-300"
+            }`}
+          >
+            <div className="text-3xl mb-2">👤</div>
+            <h3 className="text-md font-bold text-gray-800">Single Booking</h3>
+            <p className="text-xs text-gray-600 mt-1">Book one appointment</p>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => {
+              setBookingMode("group");
+              setPreferredTime("");
+            }}
+            className={`p-4 rounded-xl border-2 transition-all transform hover:scale-102 ${
+              bookingMode === "group"
+                ? "border-cyan-500 bg-cyan-50 shadow-lg"
+                : "border-gray-300 bg-white hover:border-cyan-300"
+            }`}
+          >
+            <div className="text-3xl mb-2">👥</div>
+            <h3 className="text-md font-bold text-gray-800">Group Booking</h3>
+            <p className="text-xs text-gray-600 mt-1">Book multiple slots</p>
+          </button>
+        </div>
+      </div>
+
       <div className="mb-6 relative z-10">
         <label className="block text-lg font-bold text-purple-600 mb-3">
           🗓️ Pick Your Date
@@ -187,17 +364,28 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
           onChange={(e) => {
             setSelectedDate(e.target.value);
             setPreferredTime("");
+            setGroupBookings([]);
           }}
           className="w-full border-2 border-purple-200 rounded-xl px-4 py-3 text-lg font-semibold focus:border-purple-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
         />
+        <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-lg p-3 flex items-start gap-2">
+          <span className="text-amber-600 text-lg">⏱️</span>
+          <p className="text-sm text-amber-800">
+            <span className="font-bold">Please arrive on time.</span> A $5 extra fee applies for arrivals more than 5 minutes late.
+          </p>
+        </div>
       </div>
 
-      {/* Time Slots */}
       {selectedDate && (
         <div className="mb-8 relative z-10">
-          <label className="block text-lg font-bold text-cyan-600 mb-4">
-            ⏰ Choose Your Time
+          <label className="block text-lg font-bold text-cyan-600 mb-2">
+            ⏰ {bookingMode === "single" ? "Choose Your Time" : "Select Time Slots"}
           </label>
+          <p className="text-sm text-gray-600 mb-4">
+            {bookingMode === "single" 
+              ? "Select your preferred 30-minute time slot."
+              : "Click time slots to add them to your group booking."}
+          </p>
           
           {loadingSlots ? (
             <div className="flex items-center justify-center py-8">
@@ -206,74 +394,178 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
             </div>
           ) : (
             <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-              {availableSlots.map(({ time, isBooked, isPast }) => (
-                <button
-                  key={time}
-                  disabled={isBooked || isPast}
-                  onClick={() => setPreferredTime(time)}
-                  className={`px-3 py-3 rounded-xl font-bold text-sm transition-all transform hover:scale-105 ${
-                    isBooked || isPast
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : preferredTime === time
-                      ? "bg-purple-500 text-white shadow-lg scale-105"
-                      : "bg-white border-2 border-purple-200 text-purple-600 hover:border-purple-500 hover:bg-purple-50 shadow-md hover:shadow-lg"
-                  }`}
-                  title={isPast ? "Time has passed" : isBooked ? "Already booked" : "Available"}
-                >
-                  {time}
-                  {isPast && <span className="block text-xs">Past</span>}
-                  {isBooked && !isPast && <span className="block text-xs">Booked</span>}
-                </button>
-              ))}
+              {availableSlots.map(({ time, isBooked, isPast, isTaken }) => {
+                const selected = isSlotSelected(time);
+                const isDisabled = isBooked || isPast || (bookingMode === "group" && selected);
+                return (
+                  <button
+                    key={time}
+                    disabled={isDisabled}
+                    onClick={() => handleTimeSlotClick(time)}
+                    className={`px-3 py-3 rounded-xl font-bold text-sm transition-all transform hover:scale-105 ${
+                      isBooked || isPast
+                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        : selected
+                        ? "bg-green-500 border-2 border-green-600 text-white shadow-lg scale-105 cursor-not-allowed"
+                        : "bg-white border-2 border-purple-200 text-purple-600 hover:border-purple-500 hover:bg-purple-50 shadow-md hover:shadow-lg"
+                    }`}
+                    title={isPast ? "Time has passed" : isBooked ? "Already booked" : selected ? "Selected" : "Available"}
+                  >
+                    {time}
+                    {isPast && <span className="block text-xs">Past</span>}
+                    {isBooked && !isPast && <span className="block text-xs">Booked</span>}
+                    {selected && <span className="block text-xs">✓ Selected</span>}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      {/* Contact Form */}
-      <div className="space-y-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-md font-bold text-gray-800 mb-2">✨ Your Name</label>
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="What should we call you?"
-              className="w-full border-2 border-cyan-200 rounded-xl px-4 py-3 text-md font-semibold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
-            />
+      {bookingMode === "group" && groupBookings.length > 0 && (
+        <div className="mb-8 relative z-10">
+          <div className="flex items-center justify-between mb-4">
+            <label className="block text-lg font-bold text-cyan-600">
+              📋 Your Group Bookings ({groupBookings.length})
+            </label>
+            <button
+              onClick={() => setGroupBookings([])}
+              className="text-sm text-red-600 hover:text-red-700 font-semibold underline"
+            >
+              Clear All
+            </button>
           </div>
-          <div>
-            <label className="block text-md font-bold text-gray-800 mb-2">📱 Phone Number</label>
-            <input
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
-                let formatted = '';
-                
-                if (value.length >= 1) {
-                  if (value.length <= 3) {
-                    formatted = `(${value}`;
-                  } else if (value.length <= 6) {
-                    formatted = `(${value.slice(0, 3)}) ${value.slice(3)}`;
-                  } else if (value.length <= 10) {
-                    formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
-                  } else {
-                    formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
-                  }
-                }
-                
-                setPhoneNumber(formatted);
-              }}
-              placeholder="(416) 123-4567"
-              maxLength={14}
-              className="w-full border-2 border-cyan-200 rounded-xl px-4 py-3 text-md font-semibold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
-            />
+          <div className="mb-3 bg-blue-50 border-2 border-blue-300 rounded-lg p-3 flex items-start gap-2">
+            <span className="text-blue-600 text-lg">📬</span>
+            <p className="text-sm text-blue-800">
+              We'll send appointment reminders to each slot owner's email address.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {groupBookings.sort((a, b) => a.time.localeCompare(b.time)).map((booking) => (
+              <div key={booking.id} className="bg-white rounded-xl p-3 border-2 border-cyan-200 shadow-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="font-bold text-cyan-600 text-sm whitespace-nowrap">
+                    🕐 {booking.time}
+                  </div>
+                  <button
+                    onClick={() => removeBookingFromGroup(booking.id)}
+                    className="ml-auto text-red-500 hover:text-red-700 font-bold text-sm px-2 py-1 rounded-lg hover:bg-red-50 transition-all"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={booking.name}
+                  onChange={(e) => updateGroupBooking(booking.id, 'name', e.target.value)}
+                  placeholder="Slot owner name"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none transition-all mb-2"
+                />
+                <input
+                  type="email"
+                  value={booking.email}
+                  onChange={(e) => updateGroupBooking(booking.id, 'email', e.target.value)}
+                  placeholder="slotowner@example.com"
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none transition-all mb-2"
+                  title="We'll send appointment reminders to this email"
+                />
+                <input
+                  type="tel"
+                  value={booking.phone}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    let formatted = '';
+                    
+                    if (value.length >= 1) {
+                      if (value.length <= 3) {
+                        formatted = `(${value}`;
+                      } else if (value.length <= 6) {
+                        formatted = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+                      } else if (value.length <= 10) {
+                        formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
+                      } else {
+                        formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+                      }
+                    }
+                    
+                    updateGroupBooking(booking.id, 'phone', formatted);
+                  }}
+                  placeholder="(416) 123-4567"
+                  maxLength={14}
+                  className="w-full border-2 border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 focus:outline-none transition-all"
+                />
+              </div>
+            ))}
           </div>
         </div>
+      )}
 
-        {/* Payment Options */}
+      <div className="space-y-6 relative z-10">
+        {bookingMode === "single" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-md font-bold text-gray-800 mb-2">
+                  ✨ Your Name
+                </label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Your full name"
+                  className="w-full border-2 border-cyan-200 rounded-xl px-4 py-3 text-md font-semibold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-md font-bold text-gray-800 mb-2">📧 Email Address</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your.email@example.com"
+                  className="w-full border-2 border-cyan-200 rounded-xl px-4 py-3 text-md font-semibold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-md font-bold text-gray-800 mb-2">📱 Contact Phone Number</label>
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  let formatted = '';
+                  
+                  if (value.length >= 1) {
+                    if (value.length <= 3) {
+                      formatted = `(${value}`;
+                    } else if (value.length <= 6) {
+                      formatted = `(${value.slice(0, 3)}) ${value.slice(3)}`;
+                    } else if (value.length <= 10) {
+                      formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6)}`;
+                    } else {
+                      formatted = `(${value.slice(0, 3)}) ${value.slice(3, 6)}-${value.slice(6, 10)}`;
+                    }
+                  }
+                  
+                  setPhoneNumber(formatted);
+                }}
+                placeholder="(416) 123-4567"
+                maxLength={14}
+                className="w-full border-2 border-cyan-200 rounded-xl px-4 py-3 text-md font-semibold focus:border-cyan-500 focus:outline-none transition-all bg-white shadow-md hover:shadow-lg"
+              />
+            </div>
+            <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-3 flex items-start gap-2">
+              <span className="text-blue-600 text-lg">📬</span>
+              <p className="text-sm text-blue-800">
+                We'll send appointment reminders to your email address.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div>
           <label className="block text-md font-bold text-gray-800 mb-4">💳 Payment Option</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -334,7 +626,6 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
           </div>
         </div>
 
-        {/* Submit Message */}
         {submitMessage && (
           <div className={`text-center p-3 rounded-xl font-semibold text-md ${
             submitMessage.includes('confirmed') || submitMessage.includes('🎉') 
@@ -362,7 +653,9 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
                 ? 'Processing...' 
                 : paymentOption === "now" 
                 ? 'Pay & Book Now 💳' 
-                : 'Book My Transformation 🚀'
+                : bookingMode === "group"
+                ? `Book ${groupBookings.length} Appointment${groupBookings.length !== 1 ? 's' : ''} 🚀`
+                : 'Book My Appointment 🚀'
               }
             </span>
             {!isSubmitting && (

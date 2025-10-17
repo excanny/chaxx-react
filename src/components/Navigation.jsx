@@ -39,7 +39,7 @@ const Navigation = ({ currentColor }) => {
 
 
         <ul className="hidden md:flex space-x-8">
-          {['Home', 'Services', 'Gallery', 'Contact'].map((item) => (
+          {['Home', , 'Gallery', 'Contact'].map((item) => (
             <li key={item}>
               <button 
                 onClick={(e) => smoothScrollTo(item.toLowerCase(), e)}

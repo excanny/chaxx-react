@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Plus, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Import components
 import Sidebar  from './Sidebar';
@@ -11,6 +12,7 @@ import AppointmentModal from './AppointmentModal';
 import ServiceModal from './ServiceModal';
 
 function AdminDashboard() {
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [services, setServices] = useState([]);
   const [activeTab, setActiveTab] = useState('bookings');
@@ -134,10 +136,11 @@ function AdminDashboard() {
 
   // Fetch bookings from API
   const fetchBookings = async () => {
+    debugger
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${baseUrl}/api/bookings`);
+      const response = await fetch(`${baseUrl}/bookings`);
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -277,6 +280,17 @@ function AdminDashboard() {
     }
   }, [bookings, services]);
 
+    // Handle Sign Out
+  const handleSignOut = () => {
+    // Clear any authentication data
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('authToken');
+    sessionStorage.clear();
+    
+    // Redirect to home page
+    navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-cyan-50 flex">
       <Sidebar
@@ -288,6 +302,7 @@ function AdminDashboard() {
         upcomingAlerts={upcomingAlerts}
         fetchBookings={fetchBookings}
         loading={loading}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Content */}
@@ -328,7 +343,7 @@ function AdminDashboard() {
             )}
 
             {/* Services Add Button */}
-            {activeTab === 'services' && (
+            {/* {activeTab === 'services' && (
               <button
                 onClick={() => openServiceForm()}
                 className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg"
@@ -336,7 +351,7 @@ function AdminDashboard() {
                 <Plus size={16} />
                 Add New Service
               </button>
-            )}
+            )} */}
           </div>
 
           {/* Error Message */}

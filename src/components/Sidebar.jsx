@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Users, Settings, RefreshCw, Bell } from 'lucide-react';
+import { Calendar, Users, Settings, RefreshCw, Bell, LogOut } from 'lucide-react';
 
 const Sidebar = ({ 
   activeTab, 
@@ -9,7 +9,8 @@ const Sidebar = ({
   stats, 
   upcomingAlerts, 
   fetchBookings, 
-  loading 
+  loading,
+  onSignOut 
 }) => (
   <div className="w-64 bg-white shadow-xl border-r-4 border-purple-200 p-4 flex flex-col">
     {/* Logo/Brand */}
@@ -34,7 +35,7 @@ const Sidebar = ({
             Bookings
           </button>
         </li>
-        <li>
+        {/* <li>
           <button
             onClick={() => setActiveTab('services')}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-semibold transition-all ${
@@ -46,7 +47,7 @@ const Sidebar = ({
             <Settings size={18} />
             Services
           </button>
-        </li>
+        </li> */}
       </ul>
     </nav>
 
@@ -66,12 +67,12 @@ const Sidebar = ({
             <span className="font-bold text-yellow-600">{stats.pendingBookings}</span>
           </div>
         </div>
-        <div className="bg-green-50 p-3 rounded-lg">
+        {/* <div className="bg-green-50 p-3 rounded-lg">
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600">Revenue</span>
             <span className="font-bold text-green-600">${stats.totalRevenue.toLocaleString()}</span>
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
 
@@ -92,7 +93,7 @@ const Sidebar = ({
 
     {/* Booking View Toggle */}
     {activeTab === 'bookings' && (
-      <div className="mb-6">
+      <div className="mb-2">
         <h3 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">View Mode</h3>
         <div className="space-y-2">
           <button
@@ -123,7 +124,7 @@ const Sidebar = ({
 
     {/* Alerts Badge */}
     {upcomingAlerts.length > 0 && (
-      <div className="mt-auto">
+      <div className="mt-2">
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <Bell size={16} className="text-amber-600" />
@@ -138,6 +139,17 @@ const Sidebar = ({
         </div>
       </div>
     )}
+
+    {/* Sign Out Button */}
+    <div className="mt-2 pt-4 border-t border-gray-200">
+      <button
+        onClick={onSignOut}
+        className="w-full flex items-center gap-2 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-all font-semibold"
+      >
+        <LogOut size={16} />
+        Sign Out
+      </button>
+    </div>
   </div>
 );
 

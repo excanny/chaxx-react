@@ -43,28 +43,19 @@ export default function Home() {
     { primary: "orange-600", accent: "orange-500", light: "orange-100" }
   ];
 
-  const handleSubmit = () => {
-    if (!preferredTime) {
-      alert("🎨 Please select an available time slot before booking!");
-    } else {
-      alert("🎉 Awesome! Your booking is confirmed! We'll contact you shortly.");
-    }
-  };
-
   return (
     <div className="bg-indigo-50 text-gray-900 font-sans overflow-hidden">
       <Navigation currentColor={currentColor} />
       <HeroSection currentColor={currentColor} colorCombos={colorCombos} />
-      <ServicesSection currentColor={currentColor} />
+      {/* <ServicesSection currentColor={currentColor} /> */}
       <GallerySection />
       <BookingSection 
         selectedDate={selectedDate}
         setSelectedDate={setSelectedDate}
         preferredTime={preferredTime}
         setPreferredTime={setPreferredTime}
-        handleSubmit={handleSubmit}
       />
-      <TestimonialsSection />
+      {/* <TestimonialsSection /> */}
       <Footer currentColor={currentColor} />
       <CustomStyles />
     </div>

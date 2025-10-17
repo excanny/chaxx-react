@@ -140,11 +140,10 @@ const TableView = ({ bookings, services, loading, onUpdatePaymentStatus, isAdmin
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-gray-800">ID</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-800">Customer</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-800">Service</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-800">Date & Time</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-800">Status</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-800">Payment</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-800">Price</th>
+                {/* <th className="px-4 py-3 text-left font-semibold text-gray-800">Price</th> */}
                 {isAdmin && <th className="px-4 py-3 text-left font-semibold text-gray-800">Actions</th>}
               </tr>
             </thead>
@@ -168,11 +167,6 @@ const TableView = ({ bookings, services, loading, onUpdatePaymentStatus, isAdmin
                           <span>{booking.phone_number}</span>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-800">
-                        {service ? service.name : `Service ID: ${booking.service_id}`}
-                      </p>
                     </td>
                     <td className="px-4 py-3">
                       <div>
@@ -231,11 +225,11 @@ const TableView = ({ bookings, services, loading, onUpdatePaymentStatus, isAdmin
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    {/* <td className="px-4 py-3">
                       <span className="text-lg font-bold text-green-600">
                         ${service ? service.price : 'N/A'}
                       </span>
-                    </td>
+                    </td> */}
                     {isAdmin && (
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
