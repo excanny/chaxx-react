@@ -14,6 +14,26 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
+  // Convert 24hr to 12hr AM/PM format
+  const to12Hour = (hour, minute) => {
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    const displayMinute = minute.toString().padStart(2, '0');
+    return `${displayHour}:${displayMinute} ${period}`;
+  };
+
+  // Convert 12hr AM/PM to 24hr format for backend
+  const to24Hour = (time12hr) => {
+    const [time, period] = time12hr.split(' ');
+    const [hours, minutes] = time.split(':');
+    let hour = parseInt(hours);
+    
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    
+    return `${hour.toString().padStart(2, '0')}:${minutes}:00`;
+  };
+
   const generateTimeSlots = (date) => {
     if (!date) return [];
     
@@ -25,8 +45,8 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
     
     const slots = [];
     for (let hour = startHour; hour < endHour; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+      slots.push(to12Hour(hour, 0));
+      slots.push(to12Hour(hour, 30));
     }
     
     return slots;
@@ -36,13 +56,22 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
 
   const now = new Date();
   const today = now.toISOString().split('T')[0];
-  const currentTime = now.getHours() * 100 + now.getMinutes();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
 
   const isTimeInPast = (timeSlot) => {
     if (selectedDate !== today) return false;
-    const [hours, minutes] = timeSlot.split(':').map(Number);
-    const slotTime = hours * 100 + minutes;
-    return slotTime <= currentTime;
+    
+    const [time, period] = timeSlot.split(' ');
+    const [hours, minutes] = time.split(':').map(Number);
+    let hour = hours;
+    
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    
+    if (hour < currentHour) return true;
+    if (hour === currentHour && minutes <= currentMinute) return true;
+    return false;
   };
 
   const isSlotTaken = (timeSlot) => {
@@ -75,6 +104,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
       if (response.ok) {
         const data = await response.json();
         
+        // Process the slots correctly - backend now returns AM/PM format
         const processedSlots = dailySlots.map((time) => {
           const isBooked = !data.available_slots.includes(time);
           const isPast = isTimeInPast(time);
@@ -85,6 +115,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
         setAvailableSlots(processedSlots);
       } else {
         console.error('Failed to fetch available slots');
+        // Fallback: show all slots as available (not booked)
         const fallbackSlots = dailySlots.map((time) => {
           const isPast = isTimeInPast(time);
           const isTaken = isSlotTaken(time);
@@ -92,8 +123,10 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
         });
         setAvailableSlots(fallbackSlots);
       }
+      
     } catch (error) {
       console.error('Error fetching available slots:', error);
+      // Fallback: show all slots as available
       const fallbackSlots = dailySlots.map((time) => {
         const isPast = isTimeInPast(time);
         const isTaken = isSlotTaken(time);
@@ -105,6 +138,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
     }
   };
 
+  // Fetch slots only when date changes
   useEffect(() => {
     if (selectedDate) {
       fetchAvailableSlots(selectedDate);
@@ -112,6 +146,18 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
       setAvailableSlots([]);
     }
   }, [selectedDate]);
+
+  // Update slot states when group bookings are added/removed (without refetching)
+  useEffect(() => {
+    if (availableSlots.length > 0 && bookingMode === "group") {
+      setAvailableSlots(prevSlots => 
+        prevSlots.map(slot => ({
+          ...slot,
+          isTaken: groupBookings.some(booking => booking.time === slot.time)
+        }))
+      );
+    }
+  }, [groupBookings.length, bookingMode]);
 
   const handleTimeSlotClick = (time) => {
     if (bookingMode === "single") {
@@ -127,11 +173,32 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
       };
       setGroupBookings([...groupBookings, newBooking]);
       setSubmitMessage("");
+      
+      // Update slot state immediately
+      setAvailableSlots(prevSlots => 
+        prevSlots.map(slot => 
+          slot.time === time 
+            ? { ...slot, isTaken: true }
+            : slot
+        )
+      );
     }
   };
 
   const removeBookingFromGroup = (id) => {
+    const bookingToRemove = groupBookings.find(b => b.id === id);
     setGroupBookings(groupBookings.filter(b => b.id !== id));
+    
+    // Update slot state immediately
+    if (bookingToRemove) {
+      setAvailableSlots(prevSlots => 
+        prevSlots.map(slot => 
+          slot.time === bookingToRemove.time 
+            ? { ...slot, isTaken: false }
+            : slot
+        )
+      );
+    }
   };
 
   const updateGroupBooking = (id, field, value) => {
@@ -181,7 +248,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
           customer_name: customerName.trim(),
           phone_number: phoneDigits,
           email: email.trim(),
-          appointment_time: `${selectedDate} ${preferredTime}:00`,
+          appointment_time: `${selectedDate} ${to24Hour(preferredTime)}`,
           pay_now: paymentOption === "now"
         };
 
@@ -217,6 +284,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
         setIsSubmitting(false);
       }
     } else {
+      // Group booking validation
       if (!selectedDate) {
         setSubmitMessage("Please select a date");
         return;
@@ -259,43 +327,66 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
           customer_name: booking.name.trim(),
           phone_number: booking.phone.replace(/\D/g, ''),
           email: booking.email.trim(),
-          appointment_time: `${selectedDate} ${booking.time}:00`,
+          appointment_time: `${selectedDate} ${to24Hour(booking.time)}`,
           pay_now: paymentOption === "now"
         }));
 
         console.log('Submitting group bookings:', bookings);
 
-        const responses = await Promise.all(
-          bookings.map(booking => 
-            fetch(`${baseUrl}/bookings`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(booking)
-            })
-          )
-        );
+        // ✅ FIXED: Send all bookings in ONE request
+        const response = await fetch(`${baseUrl}/bookings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bookings) // Send array directly
+        });
 
-        const allSuccessful = responses.every(r => r.ok);
-
-        if (allSuccessful) {
-          const results = await Promise.all(responses.map(r => r.json()));
-          console.log('Group booking successful:', results);
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Group booking successful:', result);
           
-          setSubmitMessage(`🎉 Group booking confirmed for ${groupBookings.length} ${groupBookings.length === 1 ? 'person' : 'people'}! We'll contact you soon.`);
-          setCustomerName("");
-          setPhoneNumber("");
-          setEmail("");
-          setPaymentOption("later");
-          setSelectedDate("");
-          setPreferredTime("");
-          setAvailableSlots([]);
-          setGroupBookings([]);
+          // Handle different response scenarios
+          if (result.success) {
+            const successCount = result.bookings?.length || result.summary?.successful || bookings.length;
+            const failedCount = result.conflicts?.length || result.summary?.failed || 0;
+            
+            if (failedCount > 0) {
+              // Partial success
+              setSubmitMessage(
+                `⚠️ ${successCount} booking(s) confirmed, but ${failedCount} slot(s) were already taken. Please check and try again.`
+              );
+            } else {
+              // Full success
+              setSubmitMessage(
+                `🎉 Group booking confirmed for ${successCount} ${successCount === 1 ? 'person' : 'people'}! We'll contact you soon.`
+              );
+              
+              // Clear form only on full success
+              setCustomerName("");
+              setPhoneNumber("");
+              setEmail("");
+              setPaymentOption("later");
+              setSelectedDate("");
+              setPreferredTime("");
+              setAvailableSlots([]);
+              setGroupBookings([]);
+            }
+          }
         } else {
-          const failedCount = responses.filter(r => !r.ok).length;
-          console.error(`${failedCount} booking(s) failed`);
-          setSubmitMessage(`❌ ${failedCount} booking(s) failed. Please try again or contact us.`);
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Group booking failed:', errorData);
+          
+          if (response.status === 409) {
+            // All slots were taken
+            setSubmitMessage(
+              `❌ All selected time slots are already booked. Please choose different times.`
+            );
+          } else {
+            setSubmitMessage(
+              `❌ Booking failed. ${errorData.message || 'Please try again or contact us.'}`
+            );
+          }
         }
       } catch (error) {
         console.error('Booking error:', error);
@@ -371,7 +462,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
         <div className="mt-3 bg-amber-50 border-2 border-amber-300 rounded-lg p-3 flex items-start gap-2">
           <span className="text-amber-600 text-lg">⏱️</span>
           <p className="text-sm text-amber-800">
-            <span className="font-bold">Please arrive on time.</span> A $5 extra fee applies for arrivals more than 5 minutes late.
+            <span className="font-bold">Please arrive on time.</span> A $5 extra fee applies for arrivals more than 10 minutes late.
           </p>
         </div>
       </div>
@@ -393,7 +484,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
               <span className="ml-3 text-cyan-600 font-semibold">Loading available times...</span>
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
               {availableSlots.map(({ time, isBooked, isPast, isTaken }) => {
                 const selected = isSlotSelected(time);
                 const isDisabled = isBooked || isPast || (bookingMode === "group" && selected);
@@ -402,7 +493,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
                     key={time}
                     disabled={isDisabled}
                     onClick={() => handleTimeSlotClick(time)}
-                    className={`px-3 py-3 rounded-xl font-bold text-sm transition-all transform hover:scale-105 ${
+                    className={`px-2 py-3 rounded-xl font-bold text-xs transition-all transform hover:scale-105 ${
                       isBooked || isPast
                         ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                         : selected
@@ -414,7 +505,7 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
                     {time}
                     {isPast && <span className="block text-xs">Past</span>}
                     {isBooked && !isPast && <span className="block text-xs">Booked</span>}
-                    {selected && <span className="block text-xs">✓ Selected</span>}
+                    {selected && <span className="block text-xs">✓</span>}
                   </button>
                 );
               })}
@@ -443,7 +534,11 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {groupBookings.sort((a, b) => a.time.localeCompare(b.time)).map((booking) => (
+            {groupBookings.sort((a, b) => {
+              const aTime = to24Hour(a.time);
+              const bTime = to24Hour(b.time);
+              return aTime.localeCompare(bTime);
+            }).map((booking) => (
               <div key={booking.id} className="bg-white rounded-xl p-3 border-2 border-cyan-200 shadow-md">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="font-bold text-cyan-600 text-sm whitespace-nowrap">

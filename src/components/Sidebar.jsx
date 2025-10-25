@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Users, Settings, RefreshCw, Bell, LogOut } from 'lucide-react';
+import { Calendar, Users, Settings, RefreshCw, Bell, LogOut, XCircle } from 'lucide-react';
 
 const Sidebar = ({ 
   activeTab, 
@@ -48,6 +48,19 @@ const Sidebar = ({
             Services
           </button>
         </li> */}
+        <li>
+          <button
+            onClick={() => setActiveTab('blocked-slots')}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg font-semibold transition-all ${
+              activeTab === 'blocked-slots'
+                ? 'bg-red-100 text-red-700 border-l-4 border-red-500'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+           <XCircle size={18} />
+            Blocked Slots
+          </button>
+        </li>
       </ul>
     </nav>
 

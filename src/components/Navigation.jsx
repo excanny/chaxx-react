@@ -27,14 +27,14 @@ const Navigation = ({ currentColor }) => {
     </div>
   </div>
 
-  <div className="flex items-center">
-    <h1 className={`text-3xl font-extrabold text-${currentColor.primary} transition-all duration-1000`}>
-      CHAXX
-    </h1>
-    <p className="ml-1 text-sm text-gray-600 uppercase tracking-widest font-bold">
-      BARBERSHOP
-    </p>
-  </div>
+ <div className="flex items-baseline">
+  <h1 className="text-3xl font-extrabold" style={{ fontFamily: 'Lobster, cursive' }}>
+    Chaxx
+  </h1>
+  <p className="ml-1 text-sm text-gray-600 uppercase tracking-widest font-bold">
+    BARBERSHOP
+  </p>
+</div>
 </div>
 
 

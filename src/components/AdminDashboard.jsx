@@ -3,13 +3,14 @@ import { Calendar, Users, Plus, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Import components
-import Sidebar  from './Sidebar';
+import Sidebar from './Sidebar';
 import UpcomingAlerts from './UpcomingAlerts';
 import CalendarView from './CalendarView';
 import TableView from './TableView';
 import ServicesGrid from './ServicesGrid';
 import AppointmentModal from './AppointmentModal';
 import ServiceModal from './ServiceModal';
+import AdminBlockedSlots from './AdminBlockedSlots';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -41,7 +42,6 @@ function AdminDashboard() {
   });
 
   const baseUrl = import.meta.env.VITE_API_BASE_URL;
- 
 
   // Initialize services and sample data
   const initializeServices = () => {
@@ -136,7 +136,6 @@ function AdminDashboard() {
 
   // Fetch bookings from API
   const fetchBookings = async () => {
-    debugger
     setLoading(true);
     setError("");
     try {
@@ -280,7 +279,7 @@ function AdminDashboard() {
     }
   }, [bookings, services]);
 
-    // Handle Sign Out
+  // Handle Sign Out
   const handleSignOut = () => {
     // Clear any authentication data
     localStorage.removeItem('adminToken');
@@ -311,7 +310,7 @@ function AdminDashboard() {
           {/* Page Header */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-bold text-gray-800 capitalize">
-              {activeTab}
+              {activeTab === 'blocked-slots' ? 'Blocked Slots' : activeTab}
             </h2>
             
             {/* Bookings View Toggle */}
@@ -386,7 +385,11 @@ function AdminDashboard() {
             />
           )}
 
-          {activeTab === 'services' && (
+          {activeTab === 'blocked-slots' && (
+            <AdminBlockedSlots />
+          )}
+
+          {/* {activeTab === 'services' && (
             <div className="space-y-4">
               <ServicesGrid
                 services={services}
@@ -394,7 +397,7 @@ function AdminDashboard() {
                 deleteService={deleteService}
               />
             </div>
-          )}
+          )} */}
 
           {/* Footer */}
           <div className="text-center mt-6 text-gray-600 text-sm">
