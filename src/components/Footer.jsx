@@ -17,7 +17,7 @@ const Footer = ({ currentColor }) => {
     {
       icon: "💬",
       title: "Connect",
-      content: "📱 +1 (306) 216-7657, +1 (306) 550-6583 \n✉️ hello@chaxx.ng\n📸 @chaxxbarbershop",
+      content: "📱 +1 (306) 216-7657, +1 (306) 550-6583 \n✉️ ologwacharles@gmail.com\n📸 @chaxxbarbershop",
       bgColor: "emerald-600"
     }
   ];
