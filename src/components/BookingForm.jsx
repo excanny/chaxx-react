@@ -34,16 +34,37 @@ const BookingForm = ({ selectedDate, setSelectedDate, preferredTime, setPreferre
     return `${hour.toString().padStart(2, '0')}:${minutes}:00`;
   };
 
-  const generateTimeSlots = (date) => {
+  // const generateTimeSlots = (date) => {
+  //   if (!date) return [];
+    
+  //   const dayOfWeek = new Date(date).getDay();
+  //   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+  //   const startHour = 9;
+  //   const endHour = isWeekend ? 20 : 18;
+    
+  //   const slots = [];
+  //   for (let hour = startHour; hour < endHour; hour++) {
+  //     slots.push(to12Hour(hour, 0));
+  //     slots.push(to12Hour(hour, 30));
+  //   }
+    
+  //   return slots;
+  // };
+
+const generateTimeSlots = (date) => {
     if (!date) return [];
     
-    const dayOfWeek = new Date(date).getDay();
+    // Create date object and get day of week (0 = Sunday, 6 = Saturday)
+    const dateObj = new Date(date + 'T00:00:00');
+    const dayOfWeek = dateObj.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     
     const startHour = 9;
-    const endHour = isWeekend ? 20 : 18;
+    const endHour = isWeekend ? 20 : 18; // 8 PM for weekends, 6 PM for weekdays
     
     const slots = [];
+    // Loop up to and including the last hour to get the :30 slot
     for (let hour = startHour; hour < endHour; hour++) {
       slots.push(to12Hour(hour, 0));
       slots.push(to12Hour(hour, 30));
