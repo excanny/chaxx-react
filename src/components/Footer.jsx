@@ -5,13 +5,13 @@ const Footer = ({ currentColor }) => {
     {
       icon: "📍",
       title: "Find Us",
-      content: "5649 Prefontaine Avenue, Regina SK",
+      content: "1300 Aberdeen Street, Regina SK",
       bgColor: "purple-600"
     },
     {
       icon: "🕐",
       title: "Open Hours",
-      content: "Mon - Fri: 9AM - 8PM\nSaturday: 8AM - 9PM\nSunday: 10AM - 6PM",
+      content: "Mon - Fri: 9AM - 8PM\nSaturday: 9AM - 8PM\nSunday: 1PM - 8PM",
       bgColor: "cyan-600"
     },
     {
