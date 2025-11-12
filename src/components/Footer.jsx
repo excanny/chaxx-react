@@ -11,7 +11,7 @@ const Footer = ({ currentColor }) => {
     {
       icon: "🕐",
       title: "Open Hours",
-      content: "Mon - Fri: 9AM - 8PM\nSaturday: 9AM - 8PM\nSunday: 1PM - 8PM",
+      content: "Monday - Saturday: 9AM - 8PM\nSunday: 1PM - 8PM",
       bgColor: "cyan-600"
     },
     {
